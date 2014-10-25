@@ -6,8 +6,7 @@
 #standard python libs
 import logging
 import time
-
-
+import json
 
 #third party libs
 from daemon import runner
@@ -16,6 +15,10 @@ from lsanomaly import lsanomaly as LS
 from Pubnub import Pubnub
 import sys
 
+import pandas as pd
+import numpy as np
+import sklearn
+
 class App():
     
     def readKeys(self):
@@ -23,20 +26,23 @@ class App():
         with open("keys") as myfile:
             for line in myfile:
                 name, var = line.partition("=")[::2]
-                myvars[name.strip()] = var.rstrip()
+                myvars[name.strip()] = "".join(var.split())
 
-        self.publish_key = myvars["publish_key"].rstrip()
-        self.subscribe_key = myvars["subscribe_key"].rstrip()
-        self.secret_key = myvars["secret_key"].rstrip()
+
+        self.publish_key = myvars["publish_key"]
+        self.subscribe_key = myvars["subscribe_key"]
+        self.secret_key = myvars["secret_key"]
 
 
     def __init__(self):
         self.stdin_path = '/dev/null'
         self.stdout_path = '/dev/tty'
         self.stderr_path = '/dev/tty'
-        self.pidfile_path =  '/tmp/testdaemon.pid'
+        self.pidfile_path =  '/tmp/eke.pid'
         self.channel_sub = 'hello_world'
         self.pidfile_timeout = 5
+
+        self.df = pd.DataFrame(columns = ['temp'])
 
         self.publish_key = ''
         self.subscribe_key = ''
@@ -53,15 +59,46 @@ class App():
                              ssl_on=self.ssl_on)
 
     def anomaly(self, message):
-        logger.error(message)
+        logger.info(message)
         pass
 
     # Asynchronous usage
     def callback(self, message, channel):
         # load stuff into LS or DBScan
         anomalymodel = LS.LSAnomaly(rho=1, sigma=.5)
-        logger.error(message)
+        try:
+            s = message
+            logger.info(float(s['temp']))
+            self.df.loc[self.df.values.size] = float(s['temp'])
 
+            if self.df.values.size > 10:
+                ### This is no good! I need to train the data
+                if np.std(self.df.values) > 1:
+                    pass
+
+                #print np.array(self.df.values)
+                df_scale = self.df['temp'].values#.reshape(self.df.values.size,1)#sklearn.preprocessing.scale(self.df['temp'].values)
+
+                df_scale = df_scale.reshape(df_scale.shape[0],1)
+
+                anomalymodel.fit(df_scale)
+                anomalymodel.predict(df_scale)#,columns=['outcome']
+                df2 = pd.DataFrame(anomalymodel.predict(df_scale),columns=['outcome'])
+                self.df['outcome'] = df2
+                print self.df2
+                for i in self.df[self.df['outcome'] == 'anomaly'].values:
+                    logger.error("Anomaly Detected! -- " + i[0])
+
+
+                del self.df
+                del anomalymodel
+                del df_scale
+                del df2
+                self.df = pd.DataFrame(columns = ['temp'])
+                
+                
+        except TypeError:
+            pass
 
     def error(self, message):
         print("ERROR : " + str(message))
@@ -79,11 +116,10 @@ class App():
         print("DISCONNECTED")
 
     def run(self):
-        logger.debug("Debug message")
-        logger.info("Info message")
-        logger.warn("Warning message")
-        logger.error("Error message")
 
+        logger.info("Eke server started!")
+
+        
         self.pubnub.subscribe(self.channel_sub, 
                               callback=self.callback, 
                               error=self.callback,
@@ -92,23 +128,12 @@ class App():
                               disconnect=self.disconnect
                               )
 
-'''
-        while True:
-            #Main code goes here ...
-            #Note that logger level needs to be set to logging.DEBUG before this shows up in the logs
-
-            logger.info("Info message")
-            logger.warn("Warning message")
-            logger.error("Error message")
-
-            time.sleep(10)
-'''
 
 app = App()
-logger = logging.getLogger("DaemonLog")
+logger = logging.getLogger("EkeLog")
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler = logging.FileHandler("/tmp/testdaemon.log")
+handler = logging.FileHandler("/tmp/eke.log")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 

@@ -8,6 +8,7 @@
 
 import sys
 from Pubnub import Pubnub
+import numpy as np
 
 publish_key = len(sys.argv) > 1 and sys.argv[1] or 'demo'
 subscribe_key = len(sys.argv) > 2 and sys.argv[2] or 'demo'
@@ -33,4 +34,6 @@ print pubnub.publish(channel, message)
 def callback(message):
     print(message)
 
-pubnub.publish(channel, message, callback=callback, error=callback)
+for i in range(11):
+	message = {'temp': np.random.uniform(low=79,high=82,size=1)[0]}
+	pubnub.publish(channel, message, callback=callback, error=callback)
