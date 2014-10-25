@@ -66,37 +66,36 @@ class App():
     def callback(self, message, channel):
         # load stuff into LS or DBScan
         anomalymodel = LS.LSAnomaly(rho=1, sigma=.5)
+        try:
+            s = message
+            logger.info(float(s['temp']))
+            self.df.loc[self.df.values.size] = float(s['temp'])
 
-        s = message
-        logger.info(float(s['temp']))
-        self.df.loc[self.df.values.size] = float(s['temp'])
-        
-        if self.df.values.size > 10:
-            ### This is no good! I need to train the data
-            if np.std(self.df.values) > 1:
-                pass
-                
-            #print np.array(self.df.values)
-            df_scale = self.df['temp'].values#.reshape(self.df.values.size,1)#sklearn.preprocessing.scale(self.df['temp'].values)
+            if self.df.values.size > 10:
+                if np.std(self.df['temp'].values) < 1.1:
+                    logger.info("std less than 1.1 for this set")
 
-            df_scale = df_scale.reshape(df_scale.shape[0],1)
+                s = pd.Series(self.df['temp'])
+                s = s.reshape(s.shape[0],1)
 
-            anomalymodel.fit(df_scale)
-            anomalymodel.predict(df_scale)#,columns=['outcome']
-            df2 = pd.DataFrame(anomalymodel.predict(df_scale),columns=['outcome'])
-            self.df['outcome'] = df2
-            print self.df2
-            for i in self.df[self.df['outcome'] == 'anomaly'].values:
-                logger.error("Anomaly Detected! -- " + i[0])
-                
-                
-            del self.df
-            del anomalymodel
-            del df_scale
-            del df2
-            self.df = pd.DataFrame(columns = ['temp'])
-                
-                
+                anomalymodel.fit(s)
+                anomalymodel.predict(s)
+                self.df['outcome'] = anomalymodel.predict(s)
+
+                ano = self.df[self.df['outcome'] != 0]
+
+                print ano
+                print self.df
+
+                for i in ano.index:
+                    print ano.ix[i]
+
+                self.df = pd.DataFrame(columns = ['temp'])
+
+                return
+
+        except TypeError:
+            pass
 
     def error(self, message):
         print("ERROR : " + str(message))
