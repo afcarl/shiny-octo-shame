@@ -18,3 +18,5 @@ To get the Tessel to work with my Ubuntu 14 machine I had to do the following
     * tessel wifi -n "pubnub-ac" -p "<pubnub-ac password>"
     * sudo npm install climate-si7020
     * sudo tessel run climate.js
+
+[](http://mjk.freeshell.org/shiny-octo-shame.png)
