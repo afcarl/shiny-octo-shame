@@ -20,3 +20,4 @@ To get the Tessel to work with my Ubuntu 14 machine I had to do the following
     * sudo tessel run climate.js
 
 [](http://mjk.freeshell.org/shiny-octo-shame.gif)
+[![ghit.me](https://ghit.me/badge.svg?repo=emmjaykay/shiny-octo-shame)](https://ghit.me/repo/emmjaykay/shiny-octo-shame)
